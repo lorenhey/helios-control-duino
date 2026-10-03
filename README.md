@@ -1,4 +1,4 @@
-# HelioControlDuino
+# helios-control-duino
 
 [![Verificación Arduino](https://github.com/lorenhey/HelioControlDuino/actions/workflows/ci.yml/badge.svg)](https://github.com/lorenhey/HelioControlDuino/actions/workflows/ci.yml)
 [![Versión](https://img.shields.io/github/v/release/lorenhey/HelioControlDuino?display_name=tag)](https://github.com/lorenhey/HelioControlDuino/releases)
