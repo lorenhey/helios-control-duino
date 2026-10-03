@@ -120,7 +120,7 @@ Zephyr. La matriz de validación de referencia se ejecuta en Uno y Mega 2560.
 
 ## Seguridad
 
-HelioControlDuino es un controlador de referencia y no reemplaza protecciones
+helios-control-duino es un controlador de referencia y no reemplaza protecciones
 eléctricas o mecánicas independientes. Para instalaciones exteriores o paneles
 de potencia significativa son obligatorios finales de carrera físicos,
 protección contra sobrecorriente, puesta a tierra, resguardo por viento y una
