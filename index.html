@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HelioControlDuino v2.0.0 | Controlador de Seguidor Solar Autónomo</title>
+  <meta name="description" content="Mesa de control interactiva y banco de simulación offline para seguidores solares de dos ejes con Arduino y algoritmos astronómicos de Meeus.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'><circle cx='12' cy='12' r='5'/><path d='M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42' stroke='%23f59e0b' stroke-width='2' stroke-linecap='round'/></svg>">
+</head>
+<body>
+
+  <!-- Encabezado Principal -->
+  <header class="header-bar">
+    <div class="brand-container">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5" />
+          <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" stroke="#070a11" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <h1>HelioControlDuino <span class="brand-badge">v2.0.0</span></h1>
+        <div class="brand-subtitle">Controlador Autónomo de Seguidor Solar de Doble Eje | Simulación & Cálculo Offline</div>
+      </div>
+    </div>
+
+    <div class="header-telemetry">
+      <div class="telemetry-pill">
+        <span class="pill-dot active" id="dot-mode"></span>
+        <span>MODO:</span>
+        <strong id="pill-mode-text" style="color: var(--status-emerald);">AUTO</strong>
+      </div>
+      <div class="telemetry-pill">
+        <span class="pill-dot amber" id="dot-state"></span>
+        <span>ESTADO:</span>
+        <strong id="pill-state-text" style="color: var(--solar-amber);">TRACKING</strong>
+      </div>
+      <div class="telemetry-pill">
+        <span>AZ:</span>
+        <strong id="pill-az-text" style="color: var(--telemetry-cyan);">90.0°</strong>
+        <span>EL:</span>
+        <strong id="pill-el-text" style="color: var(--telemetry-cyan);">20.0°</strong>
+      </div>
+      <div class="telemetry-pill">
+        <span>GANANCIA:</span>
+        <strong id="pill-gain-text" style="color: var(--solar-amber);">+32.4%</strong>
+      </div>
+    </div>
+  </header>
+
+  <!-- Pestañas de Navegación -->
+  <nav class="tabs-nav">
+    <button class="tab-btn active" data-tab="tab-workbench">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+      Mesa de Control
+    </button>
+    <button class="tab-btn" data-tab="tab-ephemeris">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      Cálculo Astronómico (Meeus)
+    </button>
+    <button class="tab-btn" data-tab="tab-energy">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Rendimiento Energético
+    </button>
+    <button class="tab-btn" data-tab="tab-serial">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z"/></svg>
+      Consola Serie
+    </button>
+    <button class="tab-btn" data-tab="tab-sketch">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+      Generador de Sketch C++
+    </button>
+    <button class="tab-btn" data-tab="tab-docs">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+      Documentación
+    </button>
+  </nav>
+
+  <!-- Contenedor Principal -->
+  <main class="main-container">
+
+    <!-- TAB 1: MESA DE CONTROL (WORKBENCH) -->
+    <div id="tab-workbench" class="tab-panel active">
+      <div class="workbench-grid">
+
+        <!-- Columna Izquierda: Visualizador del Seguidor y Bóveda -->
+        <div class="card col-7">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="2"/><line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="2"/><line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/></svg>
+              Orientación y Cinemática del Seguidor
+            </div>
+            <span class="badge-state" id="badge-controller-state">TRACKING</span>
+          </div>
+
+          <div class="tracker-canvas-container" id="tracker-viewport">
+            <svg class="tracker-svg" id="svg-tracker" viewBox="0 0 600 320">
+              <!-- Definiciones de gradientes y filtros -->
+              <defs>
+                <radialGradient id="sun-glow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#fef08a" stop-opacity="1"/>
+                  <stop offset="40%" stop-color="#f59e0b" stop-opacity="0.8"/>
+                  <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="panel-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#1e3a8a"/>
+                  <stop offset="100%" stop-color="#0f172a"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Fondo bóveda celeste -->
+              <path d="M 50 270 A 250 220 0 0 1 550 270 Z" fill="rgba(15, 23, 42, 0.4)" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 4"/>
+              <!-- Línea del horizonte -->
+              <line x1="30" y1="270" x2="570" y2="270" stroke="#334155" stroke-width="2"/>
+              <text x="40" y="290" fill="#64748b" font-size="12" font-family="sans-serif">ESTE (90°)</text>
+              <text x="280" y="290" fill="#64748b" font-size="12" font-family="sans-serif">NORTE / CENIT</text>
+              <text x="500" y="290" fill="#64748b" font-size="12" font-family="sans-serif">OESTE (270°)</text>
+
+              <!-- Arco de Elevación Solar -->
+              <circle cx="300" cy="270" r="180" fill="none" stroke="rgba(245, 158, 11, 0.15)" stroke-width="1"/>
+              <circle cx="300" cy="270" r="90" fill="none" stroke="rgba(245, 158, 11, 0.1)" stroke-width="1"/>
+
+              <!-- Sol dinámico -->
+              <g id="sun-group" transform="translate(300, 100)">
+                <circle cx="0" cy="0" r="32" fill="url(#sun-glow)"/>
+                <circle cx="0" cy="0" r="12" fill="#fef08a"/>
+                <!-- Rayo solar hacia el panel -->
+                <line id="sun-ray" x1="0" y1="0" x2="0" y2="170" stroke="rgba(251, 191, 36, 0.4)" stroke-width="2" stroke-dasharray="3 3"/>
+              </g>
+
+              <!-- Panel Solar Móvil (Montura de Doble Eje) -->
+              <g id="panel-assembly" transform="translate(300, 270)">
+                <!-- Base / Pedestal -->
+                <rect x="-12" y="-30" width="24" height="30" fill="#334155" rx="3"/>
+                <circle cx="0" cy="-30" r="8" fill="#475569"/>
+
+                <!-- Eje rotatorio de Elevación & Azimut -->
+                <g id="panel-tilt-group" transform="translate(0, -30) rotate(-20)">
+                  <!-- Normal del panel -->
+                  <line x1="0" y1="0" x2="0" y2="-80" stroke="#38bdf8" stroke-width="2"/>
+                  <polygon points="0,-85 -4,-75 4,-75" fill="#38bdf8"/>
+                  <text x="8" y="-70" fill="#38bdf8" font-size="10" font-family="monospace">n⃗ (Panel)</text>
+
+                  <!-- Panel Colector Fotovoltaico -->
+                  <rect x="-70" y="-12" width="140" height="24" fill="url(#panel-grad)" stroke="#38bdf8" stroke-width="1.5" rx="3"/>
+                  <!-- Cuadrículas de celdas -->
+                  <line x1="-35" y1="-12" x2="-35" y2="12" stroke="#1e40af" stroke-width="1"/>
+                  <line x1="0" y1="-12" x2="0" y2="12" stroke="#1e40af" stroke-width="1"/>
+                  <line x1="35" y1="-12" x2="35" y2="12" stroke="#1e40af" stroke-width="1"/>
+
+                  <!-- Separador en cruz del sensor LDR -->
+                  <rect x="-4" y="-22" width="8" height="10" fill="#f59e0b" rx="1"/>
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <div class="tracker-readouts">
+            <div class="readout-box">
+              <div class="readout-label">Azimut Panel</div>
+              <div class="readout-value" id="val-az-pos">90.0<span class="readout-unit">°</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Elevación Panel</div>
+              <div class="readout-value" id="val-el-pos">20.0<span class="readout-unit">°</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Azimut Sol</div>
+              <div class="readout-value" id="val-az-sun">95.0<span class="readout-unit">°</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Elevación Sol</div>
+              <div class="readout-value" id="val-el-sun">45.0<span class="readout-unit">°</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Sensor Óptico de 4 Cuadrantes -->
+        <div class="card col-5">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Sensor de 4 Cuadrantes (LDR)
+            </div>
+            <span class="telemetry-pill" style="padding: 0.15rem 0.5rem;">
+              <span>PROMEDIO:</span>
+              <strong id="val-light-avg" style="color: var(--solar-amber);">600</strong>
+            </span>
+          </div>
+
+          <!-- Matriz 2x2 de Sensores con Baffle en Cruz -->
+          <div class="quadrant-sensor-grid">
+            <!-- Cuadrante Superior Izquierdo (TL) -->
+            <div class="quadrant-box" id="q-box-tl">
+              <div class="quadrant-header">
+                <span class="quadrant-name">Superior Izq (TL)</span>
+                <span class="quadrant-pin">Pin A0</span>
+              </div>
+              <div class="quadrant-val" id="val-ldr-tl">600</div>
+              <div class="quadrant-bar-wrap">
+                <div class="quadrant-bar" id="bar-ldr-tl" style="width: 58%;"></div>
+              </div>
+            </div>
+
+            <!-- Cuadrante Superior Derecho (TR) -->
+            <div class="quadrant-box" id="q-box-tr">
+              <div class="quadrant-header">
+                <span class="quadrant-name">Superior Der (TR)</span>
+                <span class="quadrant-pin">Pin A1</span>
+              </div>
+              <div class="quadrant-val" id="val-ldr-tr">600</div>
+              <div class="quadrant-bar-wrap">
+                <div class="quadrant-bar" id="bar-ldr-tr" style="width: 58%;"></div>
+              </div>
+            </div>
+
+            <!-- Cuadrante Inferior Izquierdo (BL) -->
+            <div class="quadrant-box" id="q-box-bl">
+              <div class="quadrant-header">
+                <span class="quadrant-name">Inferior Izq (BL)</span>
+                <span class="quadrant-pin">Pin A2</span>
+              </div>
+              <div class="quadrant-val" id="val-ldr-bl">600</div>
+              <div class="quadrant-bar-wrap">
+                <div class="quadrant-bar" id="bar-ldr-bl" style="width: 58%;"></div>
+              </div>
+            </div>
+
+            <!-- Cuadrante Inferior Derecho (BR) -->
+            <div class="quadrant-box" id="q-box-br">
+              <div class="quadrant-header">
+                <span class="quadrant-name">Inferior Der (BR)</span>
+                <span class="quadrant-pin">Pin A3</span>
+              </div>
+              <div class="quadrant-val" id="val-ldr-br">600</div>
+              <div class="quadrant-bar-wrap">
+                <div class="quadrant-bar" id="bar-ldr-br" style="width: 58%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Indicadores de Error Diferencial Normalizado -->
+          <div class="error-meters-wrap">
+            <!-- Error de Azimut -->
+            <div class="error-meter">
+              <div class="meter-header">
+                <span>Error Azimut (Izq vs Der)</span>
+                <strong id="val-err-az">0%</strong>
+              </div>
+              <div class="meter-track">
+                <div class="meter-center"></div>
+                <div class="meter-deadband" style="left: 47%; width: 6%;"></div>
+                <div class="meter-pointer" id="pointer-err-az" style="left: 50%;"></div>
+              </div>
+            </div>
+
+            <!-- Error de Elevación -->
+            <div class="error-meter">
+              <div class="meter-header">
+                <span>Error Elevación (Arr vs Abaj)</span>
+                <strong id="val-err-el">0%</strong>
+              </div>
+              <div class="meter-track">
+                <div class="meter-center"></div>
+                <div class="meter-deadband" style="left: 47%; width: 6%;"></div>
+                <div class="meter-pointer" id="pointer-err-el" style="left: 50%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fila Inferior: Controles Interactivos del Simulador -->
+        <div class="card col-12">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+              Consola de Mando & Parámetros en Tiempo Real
+            </div>
+
+            <!-- Botonera de Modos -->
+            <div class="btn-group">
+              <button class="control-btn btn-primary" id="btn-mode-auto">AUTO</button>
+              <button class="control-btn" id="btn-mode-park">PARK</button>
+              <button class="control-btn" id="btn-mode-stow">STOW</button>
+              <button class="control-btn" id="btn-mode-stop">STOP</button>
+              <button class="control-btn" id="btn-mode-reset">RESET</button>
+              <button class="control-btn btn-danger" id="btn-emergency-toggle">E-STOP: OFF</button>
+            </div>
+          </div>
+
+          <!-- Sliders de Control Dinámico -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+            <!-- Slider Azimut Sol -->
+            <div class="control-row">
+              <div class="control-label-wrap">
+                <span>Azimut del Sol (Grados)</span>
+                <strong id="lbl-slider-sun-az">95°</strong>
+              </div>
+              <input type="range" class="slider-input" id="slider-sun-az" min="10" max="170" value="95" step="1">
+            </div>
+
+            <!-- Slider Elevación Sol -->
+            <div class="control-row">
+              <div class="control-label-wrap">
+                <span>Elevación del Sol (Grados)</span>
+                <strong id="lbl-slider-sun-el">45°</strong>
+              </div>
+              <input type="range" class="slider-input" id="slider-sun-el" min="-5" max="90" value="45" step="1">
+            </div>
+
+            <!-- Slider Radiación / Luz -->
+            <div class="control-row">
+              <div class="control-label-wrap">
+                <span>Intensidad Lumínica / DNI (W/m²)</span>
+                <strong id="lbl-slider-lux">850 W/m²</strong>
+              </div>
+              <input type="range" class="slider-input" id="slider-lux" min="0" max="1000" value="850" step="10">
+            </div>
+
+            <!-- Slider Viento -->
+            <div class="control-row">
+              <div class="control-label-wrap">
+                <span>Velocidad de Viento (Stow &gt; 45 km/h)</span>
+                <strong id="lbl-slider-wind">12 km/h</strong>
+              </div>
+              <input type="range" class="slider-input" id="slider-wind" min="0" max="80" value="12" step="1">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 2: CÁLCULO ASTRONÓMICO OFFLINE (MEEUS / SPA) -->
+    <div id="tab-ephemeris" class="tab-panel">
+      <div class="workbench-grid">
+
+        <div class="card col-5">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+              Configuración Geográfica y Temporal
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="control-row">
+              <label class="control-label-wrap"><span>Ubicación Predefinida</span></label>
+              <select class="select-input" id="select-location-preset">
+                <option value="LA_PLATA" selected>La Plata (UNLP), Argentina (-34.92°, -57.95°, UTC-3)</option>
+                <option value="BUENOS_AIRES">Buenos Aires (CABA), Argentina (-34.60°, -58.38°, UTC-3)</option>
+                <option value="CORDOBA">Córdoba, Argentina (-31.42°, -64.19°, UTC-3)</option>
+                <option value="ATACAMA">Desierto de Atacama (Radiación Máxima), Chile (-23.86°, -69.13°, UTC-4)</option>
+                <option value="MADRID">Madrid, España (40.42°, -3.70°, UTC+1)</option>
+                <option value="EQUATOR">Ecuador Solar (0.00°, 0.00°, UTC 0)</option>
+                <option value="CUSTOM">Personalizada...</option>
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="control-row">
+                <label class="control-label-wrap"><span>Latitud (°)</span></label>
+                <input type="number" class="text-input" id="input-lat" value="-34.9214" step="0.0001">
+              </div>
+              <div class="control-row">
+                <label class="control-label-wrap"><span>Longitud (°)</span></label>
+                <input type="number" class="text-input" id="input-lon" value="-57.9544" step="0.0001">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="control-row">
+                <label class="control-label-wrap"><span>Zona Horaria (minutos UTC)</span></label>
+                <input type="number" class="text-input" id="input-utc-offset" value="-180" step="60">
+              </div>
+              <div class="control-row">
+                <label class="control-label-wrap"><span>Fecha</span></label>
+                <input type="date" class="text-input" id="input-date" value="2026-01-15">
+              </div>
+            </div>
+
+            <div class="control-row">
+              <label class="control-label-wrap">
+                <span>Hora Local</span>
+                <span id="lbl-live-time-mode" style="color: var(--solar-amber); font-size: 0.75rem;"></span>
+              </label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="time" class="text-input" id="input-time" value="12:00" step="1" style="flex: 1;">
+                <button class="control-btn" id="btn-toggle-live-time">Hora Actual</button>
+              </div>
+            </div>
+
+            <button class="control-btn btn-primary" id="btn-link-sun-to-sim" style="justify-content: center; margin-top: 0.5rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+              Vincular Posición Solar al Simulador
+            </button>
+          </div>
+        </div>
+
+        <div class="card col-7">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+              Efemérides Solares Calculadas (Meeus Ephemeris)
+            </div>
+            <span class="telemetry-pill" id="badge-horizon-status">SOBRE EL HORIZONTE</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+            <div class="readout-box">
+              <div class="readout-label">Elevación Solar (α)</div>
+              <div class="readout-value" id="eph-elevation">70.97<span class="readout-unit">°</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Azimut Solar (γ)</div>
+              <div class="readout-value" id="eph-azimuth">48.16<span class="readout-unit">°</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Ángulo Cenital (θz)</div>
+              <div class="readout-value" id="eph-zenith">19.03<span class="readout-unit">°</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Declinación Solar (δ)</div>
+              <div class="readout-value" id="eph-declination">-21.14<span class="readout-unit">°</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Ecuación del Tiempo (EoT)</div>
+              <div class="readout-value" id="eph-eot">-9.3<span class="readout-unit"> min</span></div>
+            </div>
+            <div class="readout-box">
+              <div class="readout-label">Ángulo Horario (H)</div>
+              <div class="readout-value" id="eph-hour-angle">-7.2<span class="readout-unit">°</span></div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-inset); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+            <p><strong style="color: var(--solar-amber);">Sobre el algoritmo astronómico:</strong> Replicado directamente de la implementación C++ de <code style="color: var(--telemetry-cyan);">SolarCalculator.cpp</code>. Emplea las ecuaciones de Jean Meeus y aproximaciones del Solar Position Algorithm (SPA) de NOAA / NREL para estimar con precisión sub-grado la trayectoria solar en microcontroladores de 8 bits sin requerir conexión a Internet ni tablas efemérides pesadas.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 3: RENDIMIENTO ENERGÉTICO (DUAL-AXIS VS FIJO) -->
+    <div id="tab-energy" class="tab-panel">
+      <div class="workbench-grid">
+
+        <div class="card col-12">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+              Curva de Generación Solar Diaria (24 Horas)
+            </div>
+            <span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); font-size: 0.8rem;">
+              Área: 1.6 m² | Eficiencia: 20%
+            </span>
+          </div>
+
+          <div class="energy-chart-container" id="chart-viewport">
+            <!-- SVG dinámico de la curva de potencia -->
+            <svg id="svg-energy-chart" width="100%" height="100%" viewBox="0 0 800 240" preserveAspectRatio="none">
+              <!-- Rejilla y ejes se generan por JS -->
+            </svg>
+          </div>
+
+          <div class="energy-metrics-grid">
+            <div class="energy-metric-card">
+              <div class="metric-title">Seguidor de Dos Ejes (Dual-Axis)</div>
+              <div class="metric-val val-gold" id="metric-dual-kwh">3.957 <span style="font-size: 0.85rem; font-weight: normal;">kWh/día</span></div>
+              <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;">Incidencia normal continua (cos θ ≈ 1.0)</div>
+            </div>
+
+            <div class="energy-metric-card">
+              <div class="metric-title">Panel Fijo con Inclinación Óptima</div>
+              <div class="metric-val val-cyan" id="metric-fixed-kwh">2.514 <span style="font-size: 0.85rem; font-weight: normal;">kWh/día</span></div>
+              <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;" id="lbl-fixed-tilt-desc">Inclinación fija = 34.9° al Norte</div>
+            </div>
+
+            <div class="energy-metric-card">
+              <div class="metric-title">Ganancia Neta de Energía</div>
+              <div class="metric-val val-emerald" id="metric-gain-percent">+57.4%</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;">Mayor captación en amanecer y atardecer</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 4: CONSOLA SERIE ARDUINO -->
+    <div id="tab-serial" class="tab-panel">
+      <div class="workbench-grid">
+
+        <div class="card col-12">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z"/></svg>
+              Monitor Serie Virtual (115200 baudios)
+            </div>
+            <div class="btn-group">
+              <button class="control-btn" id="btn-term-clear">Limpiar</button>
+              <button class="control-btn" id="btn-term-status">STATUS</button>
+              <button class="control-btn" id="btn-term-help">HELP</button>
+              <button class="control-btn" id="btn-term-auto">AUTO</button>
+              <button class="control-btn" id="btn-term-park">PARK</button>
+              <button class="control-btn" id="btn-term-stow">STOW</button>
+              <button class="control-btn" id="btn-term-stop">STOP</button>
+              <button class="control-btn" id="btn-term-reset">RESET</button>
+            </div>
+          </div>
+
+          <div class="terminal-wrap">
+            <div class="terminal-output" id="term-output">
+              <div class="term-line-sys">HelioControlDuino 2.0.0</div>
+              <div class="term-line-sys">Escriba HELP para ver los comandos.</div>
+            </div>
+            <div class="terminal-input-bar">
+              <span class="terminal-prompt">&gt;</span>
+              <input type="text" class="terminal-input" id="term-input" placeholder="Escriba un comando (STATUS, AUTO, MOVE 120 45, STOP)..." autocomplete="off" spellcheck="false">
+              <button class="control-btn btn-primary" id="btn-term-send">Enviar</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 5: GENERADOR DE SKETCH ARDUINO C++ -->
+    <div id="tab-sketch" class="tab-panel">
+      <div class="workbench-grid">
+
+        <div class="card col-4">
+          <div class="card-header">
+            <div class="card-title">Configuración de Hardware</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+            <div class="control-row">
+              <label class="control-label-wrap"><span>LDR Superior Izquierda</span></label>
+              <input type="text" class="text-input" id="cfg-pin-tl" value="A0">
+            </div>
+            <div class="control-row">
+              <label class="control-label-wrap"><span>LDR Superior Derecha</span></label>
+              <input type="text" class="text-input" id="cfg-pin-tr" value="A1">
+            </div>
+            <div class="control-row">
+              <label class="control-label-wrap"><span>LDR Inferior Izquierda</span></label>
+              <input type="text" class="text-input" id="cfg-pin-bl" value="A2">
+            </div>
+            <div class="control-row">
+              <label class="control-label-wrap"><span>LDR Inferior Derecha</span></label>
+              <input type="text" class="text-input" id="cfg-pin-br" value="A3">
+            </div>
+            <div class="control-row">
+              <label class="control-label-wrap"><span>Pin Servo Azimut (PWM)</span></label>
+              <input type="number" class="text-input" id="cfg-pin-servo-az" value="9">
+            </div>
+            <div class="control-row">
+              <label class="control-label-wrap"><span>Pin Servo Elevación (PWM)</span></label>
+              <input type="number" class="text-input" id="cfg-pin-servo-el" value="10">
+            </div>
+            <button class="control-btn btn-primary" id="btn-update-sketch" style="justify-content: center; margin-top: 0.5rem;">
+              Actualizar Código
+            </button>
+          </div>
+        </div>
+
+        <div class="card col-8">
+          <div class="card-header">
+            <div class="card-title">Sketch Listo para Flashear (.ino)</div>
+            <button class="control-btn btn-primary" id="btn-copy-sketch">Copiar al Portapapeles</button>
+          </div>
+
+          <pre class="code-preview" id="code-sketch-preview"></pre>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 6: DOCUMENTACIÓN & ESPECIFICACIONES -->
+    <div id="tab-docs" class="tab-panel">
+      <div class="workbench-grid">
+
+        <div class="card col-12">
+          <div class="card-header">
+            <div class="card-title">Documentación Técnica del Proyecto</div>
+          </div>
+
+          <div style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.7; display: flex; flex-direction: column; gap: 1rem;">
+            <p><strong>HelioControlDuino</strong> es un controlador modular, autónomo y robusto para seguidores solares fotovoltaicos o colectores térmicos de dos ejes (azimut y elevación), concebido para funcionar al 100% sin conexión a Internet en microcontroladores AVR (ATmega328P, ATmega2560), SAMD, STM32 o ESP32.</p>
+
+            <h3 style="color: var(--solar-amber); margin-top: 0.5rem;">Arquitectura y Máquina de Estados</h3>
+            <p>El firmware prioriza en todo momento la integridad física de la instalación mediante una máquina de estados determinista:</p>
+            <ol style="margin-left: 1.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
+              <li><strong>Parada de Emergencia (E-STOP):</strong> Enclava el controlador de inmediato y apaga los servomotores ante cualquier disparo de seguridad o conflicto de finales de carrera.</li>
+              <li><strong>Resguardo por Viento (WIND_STOW):</strong> Cuando un anemómetro supera el umbral admisible, el colector se abate a posición horizontal aerodinámica (15° de inclinación) para minimizar el arrastre y torque mecánico. Requiere que el viento cese durante 60 segundos antes de retomar el seguimiento.</li>
+              <li><strong>Operación Manual (MANUAL):</strong> Comandos por puerto serie para posicionamiento angular exacto o diagnóstico en banco.</li>
+              <li><strong>Estacionamiento Nocturno (NIGHT_PARK):</strong> Si la radiación cae por debajo del umbral de oscuridad durante más de 5 minutos, el seguidor gira hacia el Este (posición de amanecer) a la espera del nuevo ciclo diurno.</li>
+              <li><strong>Seguimiento Automático (TRACKING):</strong> Seguimiento suave diferencial entre cuadrantes con zona muerta anti-oscilaciones (deadband de 6%) y pasos de 1° a intervalos periódicos no bloqueantes (500 ms).</li>
+            </ol>
+
+            <h3 style="color: var(--solar-amber); margin-top: 0.5rem;">Cálculo Astronómico Offline (Meeus Ephemeris)</h3>
+            <p>Además del sensor óptico por fotorresistencias, el sistema incluye una implementación ligera del algoritmo solar de Meeus (Solar Position Algorithm) capaz de computar las coordenadas solares (azimut, elevación, ángulo cenital, declinación solar y ecuación del tiempo) utilizando únicamente coordenadas geográficas (latitud, longitud) y la fecha/hora local, permitiendo seguimiento astronómico híbrido o ciego durante días nublados.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Pie de Página -->
+  <footer class="footer-bar">
+    <div>
+      <strong>HelioControlDuino v2.0.0</strong> — Desarrollado por <a href="https://github.com/lorenhey" target="_blank" rel="noopener">Loren</a> | Boxmark Leather Argentina
+    </div>
+    <div>
+      Código fuente bajo licencia MIT disponible en <a href="https://github.com/lorenhey/helios-control-duino" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </footer>
+
+  <!-- Scripts del Motor y Aplicación -->
+  <script src="js/helios-engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

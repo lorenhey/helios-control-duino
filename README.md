@@ -1,8 +1,11 @@
 # helios-control-duino
 
-[![Verificación Arduino](https://github.com/lorenhey/HelioControlDuino/actions/workflows/ci.yml/badge.svg)](https://github.com/lorenhey/HelioControlDuino/actions/workflows/ci.yml)
-[![Versión](https://img.shields.io/github/v/release/lorenhey/HelioControlDuino?display_name=tag)](https://github.com/lorenhey/HelioControlDuino/releases)
-[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+[![Verificación Arduino](https://github.com/lorenhey/helios-control-duino/actions/workflows/deploy.yml/badge.svg)](https://github.com/lorenhey/helios-control-duino/actions/workflows/deploy.yml)
+[![Mesa de Control en Vivo](https://img.shields.io/badge/workbench-GitHub%20Pages-f59e0b.svg)](https://lorenhey.github.io/helios-control-duino/)
+[![Versión](https://img.shields.io/badge/versión-2.0.0-blue.svg)](CHANGELOG.md)
+[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-green.svg)](LICENSE)
+
+> **Mesa de control interactiva y banco de pruebas online:** [https://lorenhey.github.io/helios-control-duino/](https://lorenhey.github.io/helios-control-duino/)
 
 Controlador autónomo y configurable para seguidores solares construidos con
 microcontroladores compatibles con Arduino. Funciona sin Internet ni servicios

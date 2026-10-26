@@ -1,0 +1,69 @@
+name: Deploy Workbench to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v4
+
+      - name: Compilar y ejecutar pruebas de lógica C++ (Host)
+        run: |
+          mkdir -p build
+          g++ -std=c++11 -Wall -Wextra -Werror \
+            -Itest/host -Isrc \
+            test/host/test_main.cpp \
+            src/HelioTypes.cpp src/HelioController.cpp \
+            src/SolarCalculator.cpp \
+            -o build/helio-tests
+          ./build/helio-tests
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Ejecutar pruebas unitarias de HeliosEngine (Node.js)
+        run: node tests/test_helios_engine.js
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Ejecutar pruebas de modelo físico y ephemeris (Python)
+        run: python tests/test_helios_engine.py
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto para GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Desplegar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

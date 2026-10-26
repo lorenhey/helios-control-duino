@@ -6,7 +6,7 @@
 namespace heliocontrol {
 
 static const int8_t PIN_UNUSED = -1;
-static const char VERSION[] = "1.0.0";
+static const char VERSION[] = "2.0.0";
 
 enum class OperatingMode : uint8_t {
   AUTOMATIC,
